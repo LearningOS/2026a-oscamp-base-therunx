@@ -7,8 +7,9 @@
 //! - `Arc<T>` atomic reference counting enables cross-thread sharing
 //! - `lock()` acquires the lock and accesses data
 
+use core::num;
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::{result, thread};
 
 /// Increment a counter concurrently using `n_threads` threads.
 /// Each thread increments the counter `count_per_thread` times.
@@ -17,10 +18,27 @@ use std::thread;
 /// Hint: Use `Arc<Mutex<usize>>` as the shared counter.
 pub fn concurrent_counter(n_threads: usize, count_per_thread: usize) -> usize {
     // TODO: Create Arc<Mutex<usize>> with initial value 0
+    let counter = Arc::new(Mutex::new(0usize));
+    let mut handles = Vec::with_capacity(n_threads);
+
     // TODO: Spawn n_threads threads
-    // TODO: In each thread, lock() and increment count_per_thread times
+    for _ in 0..n_threads {
+        let counter = Arc::clone(&counter);
+        handles.push(thread::spawn(move || {
+            // TODO: In each thread, lock() and increment count_per_thread times
+            for _ in 0..count_per_thread {
+                let mut num = counter.lock().unwrap();
+                *num += 1;                
+            }
+        }));
+    }
+    
     // TODO: Join all threads, return final value
-    todo!()
+    for handle in handles {
+        handle.join().unwrap();
+    }
+    let final_count = *counter.lock().unwrap();
+    final_count
 }
 
 /// Add elements to a shared vector concurrently using multiple threads.
@@ -30,9 +48,24 @@ pub fn concurrent_counter(n_threads: usize, count_per_thread: usize) -> usize {
 /// Hint: Use `Arc<Mutex<Vec<usize>>>`.
 pub fn concurrent_collect(n_threads: usize) -> Vec<usize> {
     // TODO: Create Arc<Mutex<Vec<usize>>>
+    let data = Arc::new(Mutex::new(Vec::new()));
+    let mut handles = Vec::with_capacity(n_threads);
     // TODO: Each thread pushes its own id
+    for id in 0..n_threads {
+        let data = Arc::clone(&data);
+        handles.push(thread::spawn(move || {
+            data.lock().unwrap().push(id);
+        }));
+    }
+    
+    for handle in handles {
+        handle.join().unwrap();
+    }
     // TODO: After joining all threads, sort the result and return
-    todo!()
+    let mut result = data.lock().unwrap().clone();
+    result.sort();
+    result
+    
 }
 
 #[cfg(test)]
